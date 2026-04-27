@@ -693,7 +693,9 @@ async function loadProds(){
   try{
     const data=await api('getProdutos');
     prods=Array.isArray(data)?data:[];
-    saveCache();G('sdot').className='sdot';G('prodErr').style.display='none';
+    saveCache();
+    localStorage.setItem('p3d_lastSync', Date.now());
+    G('sdot').className='sdot';G('prodErr').style.display='none';
     renderProds(prods);
   }catch(e){
     G('sdot').className='sdot off';
@@ -751,6 +753,8 @@ function goTab(t){
   document.querySelector(`.tab[data-tab="${t}"]`).classList.add('on');
   G('fab').style.display=t==='cat'?'flex':'none';
   if(t==='cfg'){fillCfgForm();renderChList();updateStatus();}
+  // Auto-refresh catalog from Sheets whenever tab is opened
+  if(t==='cat'&&apiUrl&&online){loadProds();}
 }
 
 // ─── View ────────────────────────────
@@ -1173,6 +1177,15 @@ function confirmReset(){
   ['p3d_cfg','p3d_cache','p3d_queue','p3d_view'].forEach(k=>localStorage.removeItem(k));
   location.reload();
 }
+
+// ─── Visibility refresh (app voltou ao foreground) ───
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&apiUrl&&online){
+    // only refresh if last sync was more than 30s ago
+    const last=+localStorage.getItem('p3d_lastSync')||0;
+    if(Date.now()-last>30000){loadProds();}
+  }
+});
 
 // ─── Init ────────────────────────────
 setView(viewMode);fillCfgForm();renderChList();updateStatus();updateQBadge();
