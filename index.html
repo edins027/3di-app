@@ -380,7 +380,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font
         <input class="fi" type="url" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec" style="font-size:11px;font-family:var(--mono)">
       </div>
       <p style="font-size:11px;color:var(--txt2);margin-bottom:9px;line-height:1.65">
-        Cole a URL do deploy. Se aparecer <strong>Failed to fetch</strong>: verifique se o acesso esta como <strong>Qualquer pessoa</strong> e crie uma <strong>nova implantacao</strong> (nao atualize a existente).
+        A URL padrao ja esta configurada. Cole uma nova URL aqui somente se gerar um novo deploy no Apps Script. Se aparecer <strong>Failed to fetch</strong>: verifique se o acesso esta como <strong>Qualquer pessoa</strong> e crie uma <strong>nova implantacao</strong> (nao atualize a existente).
       </p>
       <div class="fr2">
         <button class="btn bp" onclick="saveApiUrl()">💾 Conectar</button>
@@ -606,7 +606,10 @@ const CFG_DEF = {
 };
 
 let prods=[], cfg=JSON.parse(localStorage.getItem('p3d_cfg')||'null')||Object.assign({},CFG_DEF);
-let apiUrl=localStorage.getItem('p3d_apiUrl')||'';
+// URL do deploy do Google Apps Script — atualizada automaticamente
+// Para atualizar: coloque a nova URL em Config > Conexao no app
+const DEPLOY_URL = 'https://script.google.com/macros/s/AKfycbwIS3AAHREXK62dl16zRGtqn7vIu7-HK_LpvkxZp7_tulnMWzNly_LBJIGu09OiavmN/exec';
+let apiUrl = localStorage.getItem('p3d_apiUrl') || DEPLOY_URL;
 let viewMode=localStorage.getItem('p3d_view')||'list';
 let currentId=null, custoVis=false, detMg=300, lastCalc=null;
 let offQ=JSON.parse(localStorage.getItem('p3d_queue')||'[]');
@@ -1019,7 +1022,7 @@ function fillCfgForm(){
   GV('cfg_fil',cfg.fil||80);GV('cfg_kwh',cfg.kwh||0.7);GV('cfg_watt',cfg.watt||175);
   GV('cfg_emb',cfg.emb||1);GV('cfg_cimp',cfg.custo_imp||3000);GV('cfg_vida',cfg.vida||3000);
   GV('cfg_falha',cfg.falha||10);GV('cfg_atmin',cfg.atacado_min||5);
-  GV('apiUrlInput',apiUrl||'');
+  GV('apiUrlInput',apiUrl||DEPLOY_URL||'');
 }
 async function saveCfgF(key,val){
   cfg[key]=isNaN(+val)?val:+val;saveCfgLocal();
@@ -1139,6 +1142,10 @@ function downloadHTML(){
 }
 
 // INIT
+// Conecta automaticamente com a URL embutida se ainda nao foi configurada
+if(!localStorage.getItem('p3d_apiUrl')&&DEPLOY_URL){
+  apiUrl=DEPLOY_URL;localStorage.setItem('p3d_apiUrl',DEPLOY_URL);
+}
 setView(viewMode);fillCfgForm();renderChList();updateStatus();updateQBadge();
 GV('c_emb',cfg.emb);GV('c_falha',cfg.falha);GV('c_lucro',300);
 if(apiUrl&&online){loadProds();loadCfgFromSheets();}
