@@ -605,7 +605,7 @@ const CFG_DEF = {
   ]
 };
 
-let prods=[], cfg=JSON.parse(localStorage.getItem('p3d_cfg')||'null')||{...CFG_DEF};
+let prods=[], cfg=JSON.parse(localStorage.getItem('p3d_cfg')||'null')||Object.assign({},CFG_DEF);
 let apiUrl=localStorage.getItem('p3d_apiUrl')||'';
 let viewMode=localStorage.getItem('p3d_view')||'list';
 let currentId=null, custoVis=false, detMg=300, lastCalc=null;
@@ -757,7 +757,7 @@ function filterProds(q){
 }
 
 function buildChips(){
-  var cats=[...new Set(prods.map(function(p){return p.categoria;}).filter(Boolean))].sort();
+  var catSet=new Set(prods.map(function(p){return p.categoria;}).filter(Boolean));var cats=Array.from(catSet).sort();
   G('filterChips').innerHTML=cats.map(function(c){return '<button class="chip'+(activeFilter===c?' on':'')+'" onclick="setCatFilter(''+c+'')">'+c+'</button>';}).join('');
 }
 function setCatFilter(cat){
@@ -1023,7 +1023,7 @@ function fillCfgForm(){
 }
 async function saveCfgF(key,val){
   cfg[key]=isNaN(+val)?val:+val;saveCfgLocal();
-  if(apiUrl&&online){try{await api('saveConfig',{data:{[key]:cfg[key]}});}catch(e){}}
+  if(apiUrl&&online){try{var d={};d[key]=cfg[key];await api('saveConfig',{data:d});}catch(e){}}
 }
 async function syncCfg(){
   if(!apiUrl)return toast('Configure a URL primeiro','err');
