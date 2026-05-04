@@ -617,11 +617,15 @@ textarea.fi{resize:vertical;min-height:58px;line-height:1.5}
         <div class="fg"><label class="fl">Qtd minima</label><input class="fi" type="number" id="f_atmin" placeholder="5"></div>
         <div class="fg"><label class="fl">Desconto (%)</label><input class="fi" type="number" id="f_atdesc" placeholder="0"></div>
       </div>
-      <div class="fsec">🖼️ Fotos (URLs separadas por virgula — max 5)</div>
+      <div class="fsec">🖼️ Fotos (nomes separados por vírgula — max 5)</div>
       <div class="fg">
-        <label class="fl">URL(s) das fotos</label>
-        <textarea class="fi" id="f_imgUrl" placeholder="imgs/foto1.jpg,imgs/foto2.jpg" rows="2"></textarea>
-        <div style="font-size:10px;color:var(--txt3);margin-top:3px">Use imgs/nome.jpg para fotos enviadas ao GitHub. Separe multiplas com virgula.</div>
+        <label class="fl">Nome(s) dos arquivos de foto</label>
+        <textarea class="fi" id="f_imgUrl" placeholder="MinhaFoto_1.jpg, MinhaFoto_2.jpg" rows="2"></textarea>
+        <div style="font-size:10px;color:var(--txt3);margin-top:4px;line-height:1.6">
+          📁 Digite só o nome do arquivo (ex: <span style="color:var(--acc)">PortaJoias_1.jpg</span>).<br>
+          As fotos devem estar na pasta <span style="color:var(--acc)">imgs/</span> do GitHub.<br>
+          Para múltiplas fotos separe com vírgula: <span style="color:var(--acc)">Foto1.jpg, Foto2.jpg, Foto3.jpg</span>
+        </div>
       </div>
       <div class="fg"><label class="fl">Observacoes</label><input class="fi" type="text" id="f_notas" placeholder="Cor, acabamento, variacoes..."></div>
       <div class="brow">
@@ -656,7 +660,7 @@ const GV=(id,v)=>{const e=G(id);if(e)e.value=v;};
 
 // ── URL DO DEPLOY EMBUTIDA ────────────────────────────────────
 // Atualize aqui apos gerar nova implantacao no Apps Script
-const DEPLOY_URL='https://script.google.com/macros/s/AKfycbyfv8Bs1Ke7QoG4oBd2yOCZugNg4oeYUCLbdR7T89AbFbnoVc1XAqesZwAl_jm0_09SQQ/exec';
+const DEPLOY_URL='COLE_AQUI_A_URL_DO_DEPLOY';
 
 // ── CONFIGURACOES PADRAO ──────────────────────────────────────
 const CFG_DEF={
@@ -692,7 +696,18 @@ const saveCfgLocal=()=>localStorage.setItem('p3d_cfg',JSON.stringify(cfg));
 const saveCache=()=>localStorage.setItem('p3d_cache',JSON.stringify(prods));
 const saveQ=()=>localStorage.setItem('p3d_queue',JSON.stringify(offQ));
 function toast(msg,type,dur){type=type||'ok';dur=dur||2400;const t=G('toast');t.textContent=msg;t.className='toast show '+type;clearTimeout(t._t);t._t=setTimeout(()=>{t.className='toast';},dur);}
-const parsePhotos=imgUrl=>{if(!imgUrl||imgUrl.startsWith('data:'))return imgUrl?[imgUrl]:[];return imgUrl.split(',').map(u=>u.trim()).filter(Boolean).slice(0,5);};
+const IMGS_BASE='https://edins027.github.io/3di-app/imgs/';
+const parsePhotos=imgUrl=>{
+  if(!imgUrl)return[];
+  return imgUrl.split(',').map(u=>{
+    u=u.trim();if(!u)return null;
+    if(u.startsWith('data:'))return u;            // base64
+    if(u.startsWith('http'))return u;             // URL completa
+    if(u.startsWith('imgs/'))return u;            // relativa já com pasta
+    // nome puro (ex: "MiniPortaJoiasAcademia_1.jpg") → adiciona prefix imgs/
+    return 'imgs/'+u;
+  }).filter(Boolean).slice(0,5);
+};
 
 window.addEventListener('online',()=>{online=true;updateStatus();flushQ();});
 window.addEventListener('offline',()=>{online=false;updateStatus();});
@@ -780,9 +795,20 @@ async function loadCfgFromSheets(){
   try{
     var r=await Promise.all([api('getConfig'),api('getCanais')]);
     cfg=Object.assign({},cfg,r[0]);
-    if(Array.isArray(r[1])&&r[1].length)cfg.channels=r[1];
+    if(Array.isArray(r[1])&&r[1].length){
+      // Normaliza: backend pode retornar 'nome' ou 'name' — garante os dois
+      cfg.channels=r[1].map(ch=>({
+        ...ch,
+        name: ch.name||ch.nome||'Canal',
+        nome: ch.nome||ch.name||'Canal',
+        ativo: ch.ativo!==false&&ch.ativo!=='false'&&ch.ativo!=='FALSE',
+        perc: +ch.perc||0,
+        fixo: +ch.fixo||0,
+        faixas: Array.isArray(ch.faixas)?ch.faixas.map(f=>({ate:+f.ate,fixo:+f.fixo})):[]
+      }));
+    }
     saveCfgLocal();fillCfgForm();renderChList();
-  }catch(e){}
+  }catch(e){console.warn('loadCfgFromSheets:',e.message);}
 }
 function showErr(msg){G('prodErr').style.display='block';G('prodErr').textContent='⚠️ '+msg;}
 
@@ -807,7 +833,10 @@ function calcCh(cost,ch,lucro){
   return{pMin,pRaw,pRec,taxas,lucroR,margR:pRec>0?lucroR/pRec*100:0,tf,tp};
 }
 function calcAtac(pRec,desc){return Math.ceil(pRec*(1-desc/100))-0.01;}
-const activeChs=()=>(cfg.channels||[]).filter(c=>c.ativo!==false&&c.ativo!=='false');
+const activeChs=()=>(cfg.channels||[]).filter(c=>{
+  var a=String(c.ativo).toLowerCase().trim();
+  return a!=='false'&&a!=='0';
+});
 
 // ── NAV ───────────────────────────────────────────────────────
 function goTab(t){
@@ -1256,6 +1285,19 @@ function downloadHTML(){
 }
 
 // ── INIT ──────────────────────────────────────────────────────
+// Corrige cfg salvo com canais corrompidos (nome 'undefined')
+(function fixCorruptedCfg(){
+  var saved=JSON.parse(localStorage.getItem('p3d_cfg')||'null');
+  if(saved&&Array.isArray(saved.channels)){
+    var hasUndef=saved.channels.some(c=>!c.name||c.name==='undefined');
+    if(hasUndef){
+      // Reset channels para os defaults — serão substituídos ao sincronizar com Sheets
+      saved.channels=CFG_DEF.channels;
+      localStorage.setItem('p3d_cfg',JSON.stringify(saved));
+      cfg=saved;
+    }
+  }
+})();
 setView(viewMode);fillCfgForm();renderChList();updateStatus();updateQBadge();
 GV('c_emb',cfg.emb);GV('c_falha',cfg.falha);GV('c_lucro',300);
 if(apiUrl&&online){loadProds();loadCfgFromSheets();}
