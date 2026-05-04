@@ -15,7 +15,6 @@
   --s1:#111720;--s2:#161d28;--s3:#1c2535;--s4:#223040;
   --b1:#1e2d40;--b2:#2a3f58;--b3:#35506e;
   --acc:#00d4aa;--acc2:#00b894;--acc-d:rgba(0,212,170,.08);--acc-g:rgba(0,212,170,.18);
-  --acc-glow:0 0 20px rgba(0,212,170,.22);
   --amb:#f0a500;--amb-d:rgba(240,165,0,.1);
   --sky:#4db8ff;--rose:#ff4d7a;
   --ora:#ff6b2b;--ora-d:rgba(255,107,43,.1);
@@ -149,7 +148,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font
 .mc{width:28px;height:28px;border-radius:50%;background:var(--s2);border:1px solid var(--b1);color:var(--txt2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:var(--tr)}
 .edit-btn{width:36px;height:36px;border-radius:50%;background:var(--acc-d);border:1px solid rgba(0,212,170,.3);color:var(--acc);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
-/* GALERIA */
+/* GALERIA MULTI-FOTO */
 .det-gallery{position:relative;height:200px;background:var(--s2);border-radius:var(--r2);overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:14px;user-select:none}
 .det-gallery .gimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .25s}
 .det-gallery .gimg.hidden{display:none}
@@ -225,7 +224,7 @@ textarea.fi{resize:vertical;min-height:58px;line-height:1.5}
 .brow .btn{flex:1}
 
 /* FAB */
-.fab{position:fixed;bottom:72px;right:14px;width:52px;height:52px;border-radius:50%;background:var(--acc);color:#000;font-size:26px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px var(--acc-g);z-index:50;transition:var(--tr);font-weight:700}
+.fab{position:fixed;bottom:72px;right:14px;width:52px;height:52px;border-radius:50%;background:var(--acc);color:#000;font-size:26px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 24px rgba(0,212,170,.25);z-index:50;transition:var(--tr);font-weight:700}
 .fab:active{transform:scale(.88)}
 
 /* CALC */
@@ -264,11 +263,19 @@ textarea.fi{resize:vertical;min-height:58px;line-height:1.5}
 .add-ch{display:flex;gap:6px;margin-top:7px}
 .add-ch .fi{flex:1}
 .add-ch-btn{padding:10px 12px;background:var(--acc);border:none;border-radius:var(--r2);color:#000;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
-.api-stat{display:flex;align-items:center;gap:7px;margin-bottom:9px;padding:9px 11px;background:var(--s2);border-radius:var(--r2);border:1px solid var(--b1)}
+
+/* STATUS API (discreto) */
+.api-stat{display:flex;align-items:center;gap:7px;padding:8px 11px;background:var(--s2);border-radius:var(--r2);border:1px solid var(--b1);margin-bottom:10px}
 .api-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0}
 .api-dot.ok{background:var(--acc);box-shadow:0 0 6px var(--acc)}
 .api-dot.sync{animation:pulse .9s infinite;background:var(--amb)}
-.api-stat-txt{font-size:11px;color:var(--txt2)}
+.api-stat-txt{font-size:11px;color:var(--txt2);flex:1}
+
+/* URL oculta — so aparece ao clicar em "Configurar URL" */
+.url-toggle{background:none;border:none;color:var(--txt3);font-size:10px;cursor:pointer;text-decoration:underline;padding:0;font-family:var(--body)}
+.url-panel{display:none;margin-top:10px}
+.url-panel.open{display:block}
+
 .tog{position:relative;width:40px;height:22px;flex-shrink:0}
 .tog input{opacity:0;width:0;height:0;position:absolute}
 .ts{position:absolute;inset:0;background:var(--s3);border-radius:11px;border:1px solid var(--b2);cursor:pointer;transition:.2s}
@@ -389,7 +396,7 @@ textarea.fi{resize:vertical;min-height:58px;line-height:1.5}
       </div>
       <div class="sim-g" id="simRes"></div>
     </div>
-    <button class="save-btn" id="saveCalcBtn" style="display:none" onclick="salvarDaCalc()">💾 Salvar no catalogo & Sheets</button>
+    <button class="save-btn" id="saveCalcBtn" style="display:none" onclick="salvarDaCalc()">💾 Salvar no catalogo e Sheets</button>
   </div>
 </div>
 
@@ -398,20 +405,30 @@ textarea.fi{resize:vertical;min-height:58px;line-height:1.5}
   <div class="pg">
     <div class="cfg-c">
       <div class="cfg-t">Conexao Google Sheets</div>
+
+      <!-- Status da conexao -->
       <div class="api-stat">
         <div class="api-dot" id="apiDot"></div>
         <span class="api-stat-txt" id="apiStatTxt">Verificando...</span>
+        <button class="url-toggle" onclick="toggleUrlPanel()">Configurar URL</button>
       </div>
-      <div class="fg">
-        <label class="fl">URL do Web App Deploy</label>
-        <input class="fi" type="url" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec" style="font-size:11px;font-family:var(--mono)">
-      </div>
-      <p style="font-size:11px;color:var(--txt2);margin-bottom:10px;line-height:1.7">URL ja configurada. Cole uma nova apenas se gerar novo deploy. Se aparecer <strong>Failed to fetch</strong>: acesso deve ser <strong>Qualquer pessoa</strong> — crie uma <strong>nova implantacao</strong> (nao atualize a existente).</p>
-      <div class="fr2">
-        <button class="btn bp" onclick="saveApiUrl()">💾 Conectar</button>
-        <button class="btn bs" onclick="testConn()">🔔 Ping</button>
+
+      <!-- Painel de URL — oculto por padrao -->
+      <div class="url-panel" id="urlPanel">
+        <div class="fg">
+          <label class="fl">URL do Web App (Apps Script Deploy)</label>
+          <input class="fi" type="url" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec" style="font-size:11px;font-family:var(--mono)">
+        </div>
+        <p style="font-size:11px;color:var(--txt2);margin-bottom:10px;line-height:1.7">
+          Cole a URL do deploy. Se aparecer <strong>Failed to fetch</strong>: acesso deve ser <strong>Qualquer pessoa</strong> — sempre crie uma <strong>nova implantacao</strong>, nunca atualize a existente.
+        </p>
+        <div class="fr2">
+          <button class="btn bp" onclick="saveApiUrl()">💾 Salvar e Conectar</button>
+          <button class="btn bs" onclick="testConn()">🔔 Ping</button>
+        </div>
       </div>
     </div>
+
     <div class="cfg-c">
       <div class="cfg-t">Parametros Globais</div>
       <div class="fr2">
@@ -432,6 +449,7 @@ textarea.fi{resize:vertical;min-height:58px;line-height:1.5}
       </div>
       <button class="btn bs" onclick="syncCfg()" style="margin-top:5px">🔄 Salvar config no Sheets</button>
     </div>
+
     <div class="cfg-c">
       <div class="cfg-t">Canais de Venda</div>
       <div id="chList"></div>
@@ -440,17 +458,22 @@ textarea.fi{resize:vertical;min-height:58px;line-height:1.5}
         <button class="add-ch-btn" onclick="addChannel()">+ Adicionar</button>
       </div>
     </div>
+
     <div class="cfg-c">
       <div class="cfg-t">Backup e Sync</div>
       <button class="btn bs" onclick="forceSync()" style="margin-bottom:7px">🔄 Sincronizar tudo agora</button>
       <button class="btn bs" onclick="exportLocalBackup()">📤 Exportar backup local (JSON)</button>
     </div>
+
     <div class="cfg-c">
       <div class="cfg-t">Fotos dos Produtos</div>
-      <p style="font-size:11px;color:var(--txt2);line-height:1.75">
-        <strong style="color:var(--txt)">GitHub:</strong> Suba na pasta <code style="color:var(--acc);background:var(--s2);padding:1px 4px;border-radius:3px">imgs/</code> e use <code style="color:var(--acc);background:var(--s2);padding:1px 4px;border-radius:3px">imgs/nome.jpg</code> no campo do produto.<br><br>
-        <strong style="color:var(--txt)">Multiplas fotos:</strong> Separe URLs com virgula: <code style="color:var(--acc);background:var(--s2);padding:1px 4px;border-radius:3px">imgs/f1.jpg,imgs/f2.jpg</code><br><br>
-        <strong style="color:var(--txt)">Camera:</strong> Toque em 📷 no detalhe do produto.
+      <p style="font-size:11px;color:var(--txt2);line-height:1.8">
+        <strong style="color:var(--txt)">GitHub:</strong> Suba as fotos na pasta
+        <code style="color:var(--acc);background:var(--s2);padding:1px 5px;border-radius:3px">imgs/</code>
+        do repositorio e use <code style="color:var(--acc);background:var(--s2);padding:1px 5px;border-radius:3px">imgs/nome.jpg</code> no campo de URL do produto.<br><br>
+        <strong style="color:var(--txt)">Multiplas fotos:</strong> Separe as URLs com virgula:
+        <code style="color:var(--acc);background:var(--s2);padding:1px 5px;border-radius:3px">imgs/f1.jpg,imgs/f2.jpg</code><br><br>
+        <strong style="color:var(--txt)">Camera:</strong> Toque em 📷 no detalhe do produto para tirar foto diretamente.
       </p>
     </div>
   </div>
@@ -567,7 +590,7 @@ textarea.fi{resize:vertical;min-height:58px;line-height:1.5}
         <div class="tb"><input class="fi" type="number" id="f_min" placeholder="45"><span class="tu">min</span></div>
       </div>
       <div class="fsec">💸 Custos</div>
-      <div class="fg"><label class="fl">Embalagem (R$) — branco = padrao config</label><input class="fi" type="number" id="f_emb" step=".01"></div>
+      <div class="fg"><label class="fl">Embalagem (R$) — vazio = padrao config</label><input class="fi" type="number" id="f_emb" step=".01"></div>
       <div class="fr2">
         <div class="fg"><label class="fl">Filamento (R$)</label><input class="fi" type="number" id="f_cfil" step=".01" placeholder="Auto" oninput="updateFCusto()"></div>
         <div class="fg"><label class="fl">Energia (R$)</label><input class="fi" type="number" id="f_cene" step=".01" placeholder="Auto" oninput="updateFCusto()"></div>
@@ -598,7 +621,7 @@ textarea.fi{resize:vertical;min-height:58px;line-height:1.5}
       <div class="fg">
         <label class="fl">URL(s) das fotos</label>
         <textarea class="fi" id="f_imgUrl" placeholder="imgs/foto1.jpg,imgs/foto2.jpg" rows="2"></textarea>
-        <div style="font-size:10px;color:var(--txt3);margin-top:3px">Use imgs/nome.jpg para fotos enviadas ao GitHub. Separe multiplas URLs com virgula.</div>
+        <div style="font-size:10px;color:var(--txt3);margin-top:3px">Use imgs/nome.jpg para fotos enviadas ao GitHub. Separe multiplas com virgula.</div>
       </div>
       <div class="fg"><label class="fl">Observacoes</label><input class="fi" type="text" id="f_notas" placeholder="Cor, acabamento, variacoes..."></div>
       <div class="brow">
@@ -631,8 +654,11 @@ textarea.fi{resize:vertical;min-height:58px;line-height:1.5}
 const G=id=>document.getElementById(id);
 const GV=(id,v)=>{const e=G(id);if(e)e.value=v;};
 
-const DEPLOY_URL='https://script.google.com/macros/s/AKfycbxC3PcK_zJ-xBJbbEW0YN9e88NKlSEw2EtKlZMTLAZZ478jQR3JcMNQg-fB1h9Y-ovT/exec';
+// ── URL DO DEPLOY EMBUTIDA ────────────────────────────────────
+// Atualize aqui apos gerar nova implantacao no Apps Script
+const DEPLOY_URL='https://script.google.com/macros/s/AKfycbyfv8Bs1Ke7QoG4oBd2yOCZugNg4oeYUCLbdR7T89AbFbnoVc1XAqesZwAl_jm0_09SQQ/exec';
 
+// ── CONFIGURACOES PADRAO ──────────────────────────────────────
 const CFG_DEF={
   fil:100,kwh:0.7,watt:175,emb:1,custo_imp:3000,vida:3000,falha:10,atacado_min:5,
   channels:[
@@ -645,8 +671,11 @@ const CFG_DEF={
 };
 
 let prods=[],cfg=JSON.parse(localStorage.getItem('p3d_cfg')||'null')||Object.assign({},CFG_DEF);
-if(!localStorage.getItem('p3d_apiUrl')&&DEPLOY_URL)localStorage.setItem('p3d_apiUrl',DEPLOY_URL);
-let apiUrl=localStorage.getItem('p3d_apiUrl')||DEPLOY_URL;
+// Injeta URL padrao se ainda nao tiver salvo
+if(!localStorage.getItem('p3d_apiUrl')&&DEPLOY_URL&&DEPLOY_URL!=='COLE_AQUI_A_URL_DO_DEPLOY'){
+  localStorage.setItem('p3d_apiUrl',DEPLOY_URL);
+}
+let apiUrl=localStorage.getItem('p3d_apiUrl')||'';
 let viewMode=localStorage.getItem('p3d_view')||'list';
 let currentId=null,custoVis=false,detMg=300,lastCalc=null;
 let offQ=JSON.parse(localStorage.getItem('p3d_queue')||'[]');
@@ -674,14 +703,25 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 
+// ── STATUS / URL ──────────────────────────────────────────────
 function updateStatus(){
   var d=G('sdot');
-  if(!apiUrl){d.className='sdot off';G('apiDot').className='api-dot';G('apiStatTxt').textContent='Nao configurado';return;}
+  if(!apiUrl){
+    d.className='sdot off';
+    G('apiDot').className='api-dot';
+    G('apiStatTxt').textContent='URL nao configurada — clique em Configurar URL';
+    return;
+  }
   d.className='sdot'+(online?'':' off');
   G('apiDot').className='api-dot'+(online?' ok':'');
   G('apiStatTxt').textContent=online?'Conectado ao Sheets':'Offline — cache local';
 }
 function updateQBadge(){var b=G('qbadge');if(offQ.length){b.style.display='';b.textContent=offQ.length;}else b.style.display='none';}
+function toggleUrlPanel(){
+  var p=G('urlPanel');
+  p.classList.toggle('open');
+  if(p.classList.contains('open'))GV('apiUrlInput',apiUrl||'');
+}
 
 // ── API ───────────────────────────────────────────────────────
 async function api(action,payload){
@@ -719,7 +759,7 @@ async function loadProds(){
   if(!apiUrl){
     var c=localStorage.getItem('p3d_cache');
     if(c){prods=JSON.parse(c);renderProds(prods);buildChips();}else renderProds([]);
-    showErr('Configure a URL do Sheets em Config');return;
+    showErr('Configure a URL do Sheets em Config > Configurar URL');return;
   }
   G('prodsWrap').innerHTML='<div class="loading-box"><div class="spinner"></div><div class="loading-txt">Carregando produtos...</div></div>';
   G('sdot').className='sdot sync';
@@ -973,7 +1013,9 @@ function openForm(id){
     GV('f_imgUrl',parsePhotos(p.imgUrl).filter(u=>!u.startsWith('data:')).join(','));
     GV('f_atmin',p.atacado_min||'');GV('f_atdesc',p.atacado_desc||'');
   }else{
-    ['f_nome','f_cat','f_mat','f_peso','f_alt','f_larg','f_prof','f_diam','f_h','f_min','f_emb','f_cfil','f_cene','f_cdep','f_cext','f_falha','f_notas','f_imgUrl','f_atmin','f_atdesc'].forEach(fid=>GV(fid,fid==='f_lucro'?'300':''));
+    ['f_nome','f_cat','f_mat','f_peso','f_alt','f_larg','f_prof','f_diam','f_h','f_min',
+     'f_emb','f_cfil','f_cene','f_cdep','f_cext','f_falha','f_notas','f_imgUrl','f_atmin','f_atdesc']
+      .forEach(fid=>GV(fid,''));
     GV('f_lucro','300');GV('f_atmin',cfg.atacado_min||5);
   }
   updateFCusto();G('ovForm').classList.add('on');
@@ -995,7 +1037,7 @@ async function saveProd(){
   var nome=G('f_nome').value.trim(),peso=G('f_peso').value,h=G('f_h').value||0,m=G('f_min').value||0;
   if(!nome)return toast('Digite o nome','err');
   if(!peso)return toast('Digite o peso','err');
-  if(!+h&&!+m)return toast('Digite o tempo','err');
+  if(!+h&&!+m)return toast('Digite o tempo de impressao','err');
   var id=G('editId').value;
   var newUrls=G('f_imgUrl').value.trim();
   if(id){
@@ -1094,7 +1136,7 @@ function fillCfgForm(){
   GV('cfg_fil',cfg.fil||100);GV('cfg_kwh',cfg.kwh||0.7);GV('cfg_watt',cfg.watt||175);
   GV('cfg_emb',cfg.emb||1);GV('cfg_cimp',cfg.custo_imp||3000);GV('cfg_vida',cfg.vida||3000);
   GV('cfg_falha',cfg.falha||10);GV('cfg_atmin',cfg.atacado_min||5);
-  GV('apiUrlInput',apiUrl||DEPLOY_URL||'');
+  GV('apiUrlInput',apiUrl||'');
 }
 async function saveCfgF(key,val){
   cfg[key]=isNaN(+val)?val:+val;saveCfgLocal();
@@ -1102,8 +1144,11 @@ async function saveCfgF(key,val){
 }
 async function syncCfg(){
   if(!apiUrl)return toast('Configure a URL primeiro','err');
-  try{await api('saveConfig',{data:{fil:cfg.fil,kwh:cfg.kwh,watt:cfg.watt,emb:cfg.emb,custo_imp:cfg.custo_imp,vida:cfg.vida,falha:cfg.falha,atacado_min:cfg.atacado_min}});toast('Config salva no Sheets!');}
-  catch(e){toast('Erro: '+e.message,'err');}
+  try{
+    await api('saveConfig',{data:{fil:cfg.fil,kwh:cfg.kwh,watt:cfg.watt,emb:cfg.emb,
+      custo_imp:cfg.custo_imp,vida:cfg.vida,falha:cfg.falha,atacado_min:cfg.atacado_min}});
+    toast('Config salva no Sheets!');
+  }catch(e){toast('Erro: '+e.message,'err');}
 }
 function renderChList(){
   G('chList').innerHTML=(cfg.channels||[]).map((ch,i)=>{
@@ -1144,19 +1189,24 @@ async function delCh(id){
 function saveApiUrl(){
   var u=G('apiUrlInput').value.trim();
   if(!u||!u.includes('https://'))return toast('URL invalida','err');
-  apiUrl=u;localStorage.setItem('p3d_apiUrl',u);updateStatus();toast('Conectando...');forceSync();
+  apiUrl=u;localStorage.setItem('p3d_apiUrl',u);
+  G('urlPanel').classList.remove('open');
+  updateStatus();toast('URL salva! Conectando...');forceSync();
 }
 async function testConn(){
   if(!apiUrl)return toast('Cole a URL primeiro','err');
   G('apiDot').className='api-dot sync';
-  try{var r=await api('ping');G('apiDot').className='api-dot ok';toast('Ping OK — '+r.count+' produtos no Sheets');}
-  catch(e){G('apiDot').className='api-dot';toast('Falha: '+e.message,'err');}
+  try{
+    var r=await api('ping');
+    G('apiDot').className='api-dot ok';
+    toast('Ping OK — '+r.count+' produtos no Sheets');
+  }catch(e){G('apiDot').className='api-dot';toast('Falha: '+e.message,'err');}
 }
 async function forceSync(){
   if(!apiUrl){toast('Configure a URL primeiro','err');return;}
   G('sdot').className='sdot sync';
   try{await Promise.all([loadProds(),loadCfgFromSheets()]);await flushQ();}
-  catch(e){toast('Erro: '+e.message,'err');}
+  catch(e){toast('Erro sync: '+e.message,'err');}
   finally{updateStatus();}
 }
 function exportLocalBackup(){
