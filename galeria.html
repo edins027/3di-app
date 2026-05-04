@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="3DI Galeria">
+<meta name="theme-color" content="#080b10">
+<title>3DI · Galeria</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b10;
+    --acc: #00d4aa;
+    --acc-g: rgba(0,212,170,.18);
+    --txt: #cce4f5;
+    --txt2: #4d7a9e;
+    --s1: #111720;
+    --s2: #161d28;
+    --b1: #1e2d40;
+    --b2: #2a3f58;
+    --amb: #f0a500;
+    --danger: #ff3d5a;
+    --mono: 'JetBrains Mono', monospace;
+    --head: 'Syne', sans-serif;
+    --body: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--txt); font-family: var(--body); overflow: hidden; }
+
+  /* ── SLIDESHOW ── */
+  #slideshow {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg);
+    cursor: none;
+  }
+  #slideshow.cursor-visible { cursor: default; }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .7s ease;
+    padding: 0;
+  }
+  .slide.active { opacity: 1; }
+  .slide.prev { opacity: 0; }
+
+  .slide-img-wrap {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .slide-img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    object-position: center;
+    transition: transform 12s ease;
+    transform: scale(1.04);
+  }
+  .slide.active .slide-img { transform: scale(1); }
+
+  /* Dark gradient overlay bottom */
+  .slide-overlay {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 220px;
+    background: linear-gradient(to top, rgba(8,11,16,.95) 0%, transparent 100%);
+    z-index: 2;
+  }
+  /* Top gradient */
+  .slide-overlay-top {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 100px;
+    background: linear-gradient(to bottom, rgba(8,11,16,.7) 0%, transparent 100%);
+    z-index: 2;
+  }
+
+  .slide-info {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 28px 36px 44px;
+    z-index: 3;
+  }
+  .slide-cat {
+    font-family: var(--mono);
+    font-size: 11px; font-weight: 600;
+    color: var(--acc); letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    opacity: .9;
+  }
+  .slide-name {
+    font-family: var(--head);
+    font-size: clamp(28px, 4vw, 52px);
+    font-weight: 800; line-height: 1.1;
+    color: #fff;
+    text-shadow: 0 2px 24px rgba(0,0,0,.6);
+    margin-bottom: 12px;
+  }
+  .slide-meta {
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+  }
+  .slide-meta span {
+    font-size: 13px; color: rgba(204,228,245,.7);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .slide-prices {
+    display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap;
+  }
+  .price-tag {
+    padding: 6px 14px; border-radius: 8px;
+    font-family: var(--mono); font-size: 14px; font-weight: 700;
+    backdrop-filter: blur(8px);
+    border: 1px solid;
+  }
+  .price-tag.direta { background: rgba(0,212,170,.12); border-color: rgba(0,212,170,.35); color: var(--acc); }
+  .price-tag.shopee  { background: rgba(255,107,43,.12); border-color: rgba(255,107,43,.35); color: #ff6b2b; }
+  .price-tag.ml      { background: rgba(240,165,0,.12);  border-color: rgba(240,165,0,.35);  color: var(--amb); }
+
+  /* ── HUD TOP ── */
+  .hud-top {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 28px 0;
+    z-index: 10;
+  }
+  .logo {
+    font-family: var(--head); font-size: 22px; font-weight: 800;
+    color: var(--acc); letter-spacing: 1px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .logo-badge {
+    font-family: var(--mono); font-size: 9px; font-weight: 700;
+    background: rgba(0,212,170,.1); border: 1px solid rgba(0,212,170,.25);
+    border-radius: 4px; padding: 2px 7px; color: var(--acc); letter-spacing: .5px;
+  }
+  .hud-clock {
+    font-family: var(--mono); font-size: 15px; font-weight: 600;
+    color: rgba(204,228,245,.5);
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 0 36px 20px;
+    display: flex; gap: 5px; align-items: center;
+    z-index: 10;
+  }
+  .prog-dot {
+    flex: 1; height: 2px; border-radius: 2px;
+    background: rgba(255,255,255,.12);
+    overflow: hidden; cursor: pointer;
+    max-width: 60px;
+  }
+  .prog-dot.active { background: rgba(255,255,255,.2); }
+  .prog-fill {
+    height: 100%; width: 0%;
+    background: var(--acc);
+    border-radius: 2px;
+    transition: width linear;
+  }
+  .prog-dots-wrap {
+    display: flex; gap: 5px; flex-wrap: wrap;
+    max-width: calc(100% - 80px);
+  }
+
+  /* ── CONTROLS ── */
+  .ctrl-btn {
+    position: fixed; top: 50%; transform: translateY(-50%);
+    width: 44px; height: 80px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 10px; color: rgba(255,255,255,.6);
+    font-size: 22px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10; backdrop-filter: blur(6px);
+    transition: all .2s; opacity: 0;
+  }
+  .ctrl-btn:hover { background: rgba(255,255,255,.12); color: #fff; }
+  #slideshow.cursor-visible .ctrl-btn { opacity: 1; }
+  .ctrl-btn.left { left: 16px; }
+  .ctrl-btn.right { right: 16px; }
+  .ctrl-btn:active { transform: translateY(-50%) scale(.92); }
+
+  /* ── PAUSE INDICATOR ── */
+  .pause-badge {
+    position: fixed; top: 24px; right: 80px;
+    background: rgba(240,165,0,.15); border: 1px solid rgba(240,165,0,.3);
+    border-radius: 20px; padding: 4px 12px;
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    color: var(--amb); z-index: 11;
+    display: none;
+  }
+  .pause-badge.show { display: block; }
+
+  /* ── EMPTY / LOADING ── */
+  .fullscreen-msg {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; z-index: 20;
+    background: var(--bg);
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 2px solid var(--b2);
+    border-top-color: var(--acc);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .msg-txt { font-family: var(--head); font-size: 18px; color: var(--txt2); }
+  .msg-sub { font-size: 12px; color: var(--txt2); opacity: .6; text-align: center; max-width: 300px; line-height: 1.6; }
+
+  /* ── SETUP PANEL ── */
+  .setup-panel {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 30; padding: 32px;
+  }
+  .setup-box {
+    background: var(--s1);
+    border: 1px solid var(--b1);
+    border-radius: 20px;
+    padding: 32px; max-width: 460px; width: 100%;
+  }
+  .setup-logo {
+    font-family: var(--head); font-size: 26px; font-weight: 800;
+    color: var(--acc); margin-bottom: 6px;
+  }
+  .setup-sub { font-size: 13px; color: var(--txt2); margin-bottom: 28px; line-height: 1.6; }
+  .setup-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--txt2); margin-bottom: 6px; display: block; }
+  .setup-input {
+    width: 100%; padding: 11px 14px;
+    background: var(--s2); border: 1px solid var(--b2);
+    border-radius: 10px; color: var(--txt);
+    font-family: var(--mono); font-size: 12px;
+    outline: none; margin-bottom: 14px;
+    transition: border-color .2s;
+  }
+  .setup-input:focus { border-color: var(--acc); }
+  .setup-btn {
+    width: 100%; padding: 13px;
+    background: var(--acc); color: #000;
+    border: none; border-radius: 10px;
+    font-family: var(--body); font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: opacity .2s;
+  }
+  .setup-btn:active { opacity: .8; }
+  .setup-hint { font-size: 11px; color: var(--txt2); margin-top: 14px; line-height: 1.7; }
+  .setup-hint code { color: var(--acc); background: var(--s2); padding: 1px 5px; border-radius: 3px; }
+
+  /* ── TOUCH ZONES ── */
+  .touch-left, .touch-right {
+    position: fixed; top: 0; bottom: 0; width: 30%;
+    z-index: 5; cursor: pointer;
+  }
+  .touch-left { left: 0; }
+  .touch-right { right: 0; }
+</style>
+</head>
+<body>
+
+<!-- SETUP PANEL (shown when not configured) -->
+<div class="setup-panel" id="setupPanel">
+  <div class="setup-box">
+    <div class="setup-logo">3DI · Galeria</div>
+    <div class="setup-sub">Vitrine de produtos para iPad. Configure o URL do seu deploy do Apps Script para carregar os produtos e precos automaticamente.</div>
+    <label class="setup-label">URL do Deploy (Apps Script)</label>
+    <input class="setup-input" type="url" id="setupUrl" placeholder="https://script.google.com/macros/s/.../exec">
+    <label class="setup-label">Base URL das fotos (GitHub)</label>
+    <input class="setup-input" type="text" id="setupImgBase" placeholder="https://edins027.github.io/3di-app/imgs/" value="https://edins027.github.io/3di-app/imgs/">
+    <label class="setup-label">Intervalo entre slides (segundos)</label>
+    <input class="setup-input" type="number" id="setupInterval" placeholder="8" value="8" min="3" max="60">
+    <button class="setup-btn" onclick="saveSetup()">▶ Iniciar Galeria</button>
+    <div class="setup-hint">
+      As fotos devem estar na pasta <code>imgs/</code> do repositório GitHub.<br>
+      O nome da foto no campo <strong>imgUrl</strong> da planilha deve ser apenas o nome do arquivo, ex: <code>porta-joias.jpg</code>
+    </div>
+  </div>
+</div>
+
+<!-- HUD TOP -->
+<div class="hud-top">
+  <div class="logo">
+    <span>3DI</span>
+    <span class="logo-badge">PRINT 3D</span>
+  </div>
+  <div class="hud-clock" id="clock">--:--</div>
+</div>
+
+<div class="pause-badge" id="pauseBadge">⏸ PAUSADO</div>
+
+<!-- SLIDESHOW -->
+<div id="slideshow">
+  <div class="fullscreen-msg" id="loadingMsg">
+    <div class="spinner"></div>
+    <div class="msg-txt">Carregando catálogo...</div>
+    <div class="msg-sub">Buscando produtos e preços do Google Sheets</div>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<button class="ctrl-btn left" onclick="prevSlide()">‹</button>
+<button class="ctrl-btn right" onclick="nextSlide()">›</button>
+
+<!-- TOUCH ZONES -->
+<div class="touch-left" onclick="prevSlide()"></div>
+<div class="touch-right" onclick="nextSlide()"></div>
+
+<!-- PROGRESS -->
+<div class="progress-wrap">
+  <div class="prog-dots-wrap" id="progDots"></div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+let apiUrl      = localStorage.getItem('gal_apiUrl')     || '';
+let imgBase     = localStorage.getItem('gal_imgBase')    || 'https://edins027.github.io/3di-app/imgs/';
+let intervalSec = +localStorage.getItem('gal_interval')  || 8;
+
+// Canais de venda (IDs sincronizados com o backend)
+const CHANNELS = [
+  { id: '0dd22aab-e01b-44e1-a586-2f3fbc80b94c', name: 'Direto', perc: 0,  fixo: 0,
+    faixas: [], cls: 'direta' },
+  { id: '04e7b4f8-cc2d-42e9-9970-1a83a085aa49', name: 'Shopee', perc: 20, fixo: 0,
+    faixas: [{ate:79.99,fixo:4},{ate:99.99,fixo:16},{ate:199.99,fixo:20},{ate:9999,fixo:26}], cls: 'shopee' },
+  { id: 'fc73acf6-ea32-4ff0-be9d-6ae03464e395', name: 'ML',     perc: 16, fixo: 0,
+    faixas: [{ate:29,fixo:6.25},{ate:50,fixo:6.5},{ate:79,fixo:6.75},{ate:9999,fixo:0}], cls: 'ml' },
+];
+
+// Parâmetros globais padrão (sobrescritos pelo Sheets)
+let CFG = { fil: 100, kwh: 0.7, watt: 175, emb: 1, custo_imp: 3000, vida: 3000, falha: 10 };
+
+// ── STATE ─────────────────────────────────────────────────────
+let slides = [], current = 0, timer = null, paused = false;
+let cursorTimeout = null;
+
+// ── SETUP ─────────────────────────────────────────────────────
+function saveSetup() {
+  const u = document.getElementById('setupUrl').value.trim();
+  const b = document.getElementById('setupImgBase').value.trim();
+  const i = +document.getElementById('setupInterval').value || 8;
+  if (!u || !u.includes('https://')) return alert('URL inválida');
+  apiUrl      = u;
+  imgBase     = b.endsWith('/') ? b : b + '/';
+  intervalSec = Math.max(3, Math.min(60, i));
+  localStorage.setItem('gal_apiUrl',    apiUrl);
+  localStorage.setItem('gal_imgBase',   imgBase);
+  localStorage.setItem('gal_interval',  intervalSec);
+  document.getElementById('setupPanel').style.display = 'none';
+  init();
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+function init() {
+  if (!apiUrl) return; // stay on setup panel
+  document.getElementById('setupPanel').style.display = 'none';
+  document.getElementById('loadingMsg').style.display = 'flex';
+  clockTick();
+  setInterval(clockTick, 10000);
+  loadData();
+}
+
+async function loadData() {
+  try {
+    const [prods, cfgData] = await Promise.all([
+      apiFetch('getProdutos'),
+      apiFetch('getConfig')
+    ]);
+    if (cfgData && !cfgData.error) Object.assign(CFG, cfgData);
+    buildSlides(Array.isArray(prods) ? prods.filter(p => p.ativo !== 'false' && p.imgUrl) : []);
+  } catch(e) {
+    showError('Falha ao carregar: ' + e.message);
+  }
+}
+
+async function apiFetch(action) {
+  const url = apiUrl + '?action=' + encodeURIComponent(action);
+  const r = await fetch(url, { method: 'GET', redirect: 'follow' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const d = await r.json();
+  if (d.error) throw new Error(d.error);
+  return d;
+}
+
+// ── CALC ──────────────────────────────────────────────────────
+function calcCost(p) {
+  const h = (+p.h || 0) + (+p.min || 0) / 60;
+  const dr = CFG.custo_imp / CFG.vida;
+  const fil = p.cfil != null && p.cfil !== '' ? +p.cfil : (+p.peso / 1000) * CFG.fil;
+  const ene = p.cene != null && p.cene !== '' ? +p.cene : (CFG.watt / 1000) * h * CFG.kwh;
+  const dep = p.cdep != null && p.cdep !== '' ? +p.cdep : dr * h;
+  const emb = p.emb  != null && p.emb  !== '' ? +p.emb  : CFG.emb;
+  const sub = fil + ene + dep + emb + (+p.cext || 0);
+  const falha = p.falha != null && p.falha !== '' ? +p.falha : CFG.falha;
+  return sub * (1 + falha / 100);
+}
+
+function calcPrice(cost, ch, lucro) {
+  const base = cost * (1 + lucro / 100);
+  let tf = 0;
+  if (ch.faixas && ch.faixas.length) {
+    for (const f of ch.faixas) { if (base <= f.ate) { tf = f.fixo; break; } }
+  } else { tf = ch.fixo || 0; }
+  const tp = ch.perc || 0;
+  const pRaw = (base + tf) / (1 - tp / 100);
+  return Math.ceil(pRaw) - 0.01;
+}
+
+const fmt = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtP = g => +g >= 1000 ? (+g / 1000).toFixed(2) + ' kg' : (+g || 0) + 'g';
+const fmtT = (h, m) => { const t = (+h||0)*60 + (+m||0); const hh = Math.floor(t/60), mm = t%60; return hh > 0 ? (mm > 0 ? hh+'h '+mm+'min' : hh+'h') : mm+'min'; };
+
+function parseImgUrls(imgUrl) {
+  if (!imgUrl) return [];
+  // Suporta: nome-arquivo.jpg ou imgs/nome.jpg ou URL completa
+  return imgUrl.split(',').map(u => {
+    u = u.trim();
+    if (!u) return null;
+    if (u.startsWith('http')) return u;          // URL completa
+    if (u.startsWith('data:')) return u;          // base64
+    if (u.startsWith('imgs/')) return 'https://edins027.github.io/3di-app/' + u;
+    return imgBase + u;                           // só nome do arquivo
+  }).filter(Boolean).slice(0, 5);
+}
+
+// ── BUILD SLIDES ──────────────────────────────────────────────
+function buildSlides(prods) {
+  // Expande produtos com múltiplas fotos em múltiplos slides
+  slides = [];
+  for (const p of prods) {
+    const photos = parseImgUrls(p.imgUrl);
+    if (!photos.length) continue;
+    const cost  = calcCost(p);
+    const lucro = +p.lucro || 300;
+    const prices = CHANNELS.map(ch => ({ ...ch, price: calcPrice(cost, ch, lucro) }));
+    for (const photo of photos) {
+      slides.push({ p, photo, prices });
+    }
+  }
+
+  if (!slides.length) {
+    showError('Nenhum produto com foto encontrado.\nAdicione fotos aos produtos no app 3DI.');
+    return;
+  }
+
+  document.getElementById('loadingMsg').style.display = 'none';
+  renderSlides();
+  buildProgress();
+  goTo(0, false);
+  startTimer();
+  setupCursorHide();
+}
+
+function renderSlides() {
+  const ss = document.getElementById('slideshow');
+  // Remove existing slides
+  ss.querySelectorAll('.slide').forEach(s => s.remove());
+
+  slides.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'slide';
+    el.dataset.index = i;
+    el.innerHTML = `
+      <div class="slide-img-wrap">
+        <img class="slide-img" src="${s.photo}" alt="${s.p.nome}" loading="lazy" onerror="this.style.opacity='.15'">
+      </div>
+      <div class="slide-overlay-top"></div>
+      <div class="slide-overlay"></div>
+      <div class="slide-info">
+        <div class="slide-cat">${s.p.categoria || 'Produto'}</div>
+        <div class="slide-name">${s.p.nome}</div>
+        <div class="slide-meta">
+          ${s.p.peso ? `<span>⚖️ ${fmtP(s.p.peso)}</span>` : ''}
+          ${(+s.p.h || +s.p.min) ? `<span>⏱️ ${fmtT(s.p.h, s.p.min)}</span>` : ''}
+          ${s.p.material ? `<span>🧱 ${s.p.material}</span>` : ''}
+        </div>
+        <div class="slide-prices">
+          ${s.prices.map(ch => `<div class="price-tag ${ch.cls}"><span style="font-size:10px;opacity:.7;margin-right:4px">${ch.name}</span>${fmt(ch.price)}</div>`).join('')}
+        </div>
+      </div>`;
+    ss.appendChild(el);
+  });
+}
+
+// ── PROGRESS ──────────────────────────────────────────────────
+function buildProgress() {
+  const wrap = document.getElementById('progDots');
+  const MAX_DOTS = 30;
+  const show = Math.min(slides.length, MAX_DOTS);
+  wrap.innerHTML = '';
+  for (let i = 0; i < show; i++) {
+    const d = document.createElement('div');
+    d.className = 'prog-dot';
+    d.onclick = () => goTo(i, true);
+    d.innerHTML = '<div class="prog-fill" id="pf'+i+'"></div>';
+    wrap.appendChild(d);
+  }
+}
+
+function updateProgress() {
+  document.querySelectorAll('.prog-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === current);
+    const pf = document.getElementById('pf'+i);
+    if (pf) {
+      if (i === current) {
+        pf.style.transition = `width ${intervalSec}s linear`;
+        pf.style.width = '100%';
+      } else {
+        pf.style.transition = 'none';
+        pf.style.width = i < current ? '100%' : '0%';
+      }
+    }
+  });
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────
+function goTo(idx, resetTimer = true) {
+  const prev = current;
+  current = (idx + slides.length) % slides.length;
+  const all = document.querySelectorAll('.slide');
+  all.forEach((el, i) => {
+    el.classList.remove('active', 'prev');
+    if (i === current) el.classList.add('active');
+    else if (i === prev) el.classList.add('prev');
+  });
+  updateProgress();
+  if (resetTimer) { stopTimer(); if (!paused) startTimer(); }
+}
+
+function nextSlide() { goTo(current + 1); }
+function prevSlide() { goTo(current - 1); }
+
+function startTimer() {
+  stopTimer();
+  timer = setInterval(() => goTo(current + 1), intervalSec * 1000);
+}
+function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
+
+// ── PAUSE (tap center) ────────────────────────────────────────
+document.getElementById('slideshow').addEventListener('click', e => {
+  const w = window.innerWidth;
+  const x = e.clientX;
+  // Only toggle pause if click is in center 40%
+  if (x > w * 0.3 && x < w * 0.7) {
+    paused = !paused;
+    const badge = document.getElementById('pauseBadge');
+    if (paused) { stopTimer(); badge.classList.add('show'); }
+    else { startTimer(); badge.classList.remove('show'); }
+  }
+});
+
+// ── KEYBOARD ──────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+  if (e.key === 'ArrowLeft')  prevSlide();
+  if (e.key === 'Escape') { paused = !paused; document.getElementById('pauseBadge').classList.toggle('show', paused); if (!paused) startTimer(); else stopTimer(); }
+  if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+});
+
+// ── FULLSCREEN ────────────────────────────────────────────────
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen().catch(()=>{});
+}
+document.addEventListener('dblclick', toggleFullscreen);
+
+// ── CURSOR AUTO-HIDE ──────────────────────────────────────────
+function setupCursorHide() {
+  const ss = document.getElementById('slideshow');
+  document.addEventListener('mousemove', () => {
+    ss.classList.add('cursor-visible');
+    clearTimeout(cursorTimeout);
+    cursorTimeout = setTimeout(() => ss.classList.remove('cursor-visible'), 3000);
+  });
+}
+
+// ── CLOCK ─────────────────────────────────────────────────────
+function clockTick() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── ERROR ─────────────────────────────────────────────────────
+function showError(msg) {
+  document.getElementById('loadingMsg').innerHTML = `
+    <div style="font-size:36px;opacity:.3">📷</div>
+    <div class="msg-txt" style="color:var(--txt2)">${msg.split('\n')[0]}</div>
+    <div class="msg-sub">${msg.split('\n')[1] || ''}</div>
+    <button onclick="document.getElementById('setupPanel').style.display='flex'" style="margin-top:16px;padding:10px 20px;background:var(--s2);border:1px solid var(--b2);border-radius:8px;color:var(--txt);font-family:var(--body);cursor:pointer;">⚙️ Reconfigurar</button>`;
+  document.getElementById('loadingMsg').style.display = 'flex';
+}
+
+// ── AUTO REFRESH (every 30 min) ───────────────────────────────
+setInterval(() => { if (apiUrl) loadData(); }, 30 * 60 * 1000);
+
+// ── START ─────────────────────────────────────────────────────
+if (apiUrl) {
+  document.getElementById('setupPanel').style.display = 'none';
+  document.getElementById('setupUrl').value = apiUrl;
+  document.getElementById('setupImgBase').value = imgBase;
+  document.getElementById('setupInterval').value = intervalSec;
+  init();
+} else {
+  document.getElementById('loadingMsg').style.display = 'none';
+}
+</script>
+</body>
+</html>
